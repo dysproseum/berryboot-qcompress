@@ -4,13 +4,22 @@
 
 int main() {
     // Original data
-    QByteArray originalData = "Hello, this is some text to compress.";
+    QFile file("distro.smime");
+    if (!file.open(QIODevice::ReadOnly)) {
+        qDebug() << "Error: file could not be opened.";
+        return 1;
+    }
+
+    QByteArray originalData = file.readAll();
+    file.close();
+
+    // Now 'originalData' contains the full content of the file as a QByteArray
 
     // Compress the data
-    QByteArray compressedData = qCompress(originalData, 9); // Use level 9 for maximum compression
+    QByteArray compressedData = qCompress(originalData, -1); // Use level 9 for maximum compression
 
     // Save compressed data to a file
-    QFile outFile("compressed.bin");
+    QFile outFile("distro.zsmime");
     if (outFile.open(QIODevice::WriteOnly)) {
         outFile.write(compressedData);
         outFile.close();
@@ -18,7 +27,7 @@ int main() {
     }
 
     // Load and decompress
-    QFile inFile("compressed.bin");
+    QFile inFile("distro.zsmime");
     if (inFile.open(QIODevice::ReadOnly)) {
         QByteArray readData = inFile.readAll();
         inFile.close();
