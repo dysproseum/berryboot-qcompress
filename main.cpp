@@ -34,7 +34,11 @@ int main() {
 
         QByteArray decompressedData = qUncompress(readData);
         if (!decompressedData.isEmpty()) {
-            qDebug() << "Decompressed data:" << decompressedData;
+            if (decompressedData == originalData) {
+              qDebug() << "Decompressed data matches original data.";
+            } else {
+              qDebug() << "Decompressed data did not match:" << decompressedData;
+            }
         } else {
             qDebug() << "Decompression failed!";
         }
