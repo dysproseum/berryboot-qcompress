@@ -46,7 +46,8 @@ int main(int argc, char *argv[]) {
     }
 
     // Original data
-    QFile file(pArgs.at(0));
+    QString name = pArgs.at(0);
+    QFile file(name);
     if (!file.open(QIODevice::ReadOnly)) {
         qDebug() << "Error: file could not be opened.";
         return 1;
@@ -60,14 +61,25 @@ int main(int argc, char *argv[]) {
     // Compress the data
     QByteArray compressedData = qCompress(originalData, -1); // Use level 9 for maximum compression
 
-    // Save compressed data to a file
-    QFile outFile("distro.zsmime");
+    // Set output filename
+    QString outName = name + ".z";
+
+    // Special case for .smime files
+    int lastDot = name.lastIndexOf('.');
+    if (lastDot != -1) {
+        QString extension = name.mid(lastDot + 1);
+        QString filename = name.mid(0, lastDot);
+        if (extension == "smime") {
+          outName = filename + ".zsmime";
+        }
+    }
+    QFile outFile(outName);
 
     // Check if output exists
-    if (QFile::exists("distro.zsmime")) {
+    if (QFile::exists(outName)) {
         bool force = parser.isSet(forceOption);
         if (!force) {
-          std::cout << "Overwrite distro.zsmime (y/n)? " << std::flush;
+          std::cout << "Overwrite " << outName.toStdString().c_str() << " (y/n)? " << std::flush;
           std::string confirm;
           std::getline(std::cin, confirm); // Reads full line including spaces
           if (confirm != "y") {
@@ -77,14 +89,15 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // Save compressed data to a file
     if (outFile.open(QIODevice::WriteOnly)) {
         outFile.write(compressedData);
         outFile.close();
-        qDebug() << "Compressed data written to file.";
+        qDebug() << "Compressed data written to" << outName;
     }
 
     // Load and decompress
-    QFile inFile("distro.zsmime");
+    QFile inFile(outName);
     if (inFile.open(QIODevice::ReadOnly)) {
         QByteArray readData = inFile.readAll();
         inFile.close();
@@ -102,4 +115,4 @@ int main(int argc, char *argv[]) {
     }
 
     return 0;
-}   
+}
