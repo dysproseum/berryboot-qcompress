@@ -4,7 +4,6 @@
 #include <QByteArray>
 #include <QFile>
 #include <QDebug>
-
 #include <iostream>
 #include <string>
 
@@ -27,6 +26,11 @@ int main(int argc, char *argv[]) {
         QCoreApplication::translate("main", "Overwrite existing files."));
     parser.addOption(forceOption);
 
+    // A boolean option with multiple names (-x, --extract)
+     QCommandLineOption exOption(QStringList() << "x" << "extract",
+        QCoreApplication::translate("main", "Extract compressed data."));
+    parser.addOption(exOption);
+
     // CRITICAL: Must call process() to parse arguments
     parser.process(app);
 
@@ -44,6 +48,8 @@ int main(int argc, char *argv[]) {
       qDebug() << "Too many arguments supplied.";
       return 1;
     }
+    bool extract = parser.isSet(exOption);
+    bool force = parser.isSet(forceOption);
 
     // Original data
     QString name = pArgs.at(0);
@@ -59,25 +65,51 @@ int main(int argc, char *argv[]) {
     // Now 'originalData' contains the full content of the file as a QByteArray
 
     // Compress the data
-    QByteArray compressedData = qCompress(originalData, -1); // Use level 9 for maximum compression
+    QByteArray compressedData;
+    if (extract) {
+      compressedData = qUncompress(originalData);
+      if (compressedData.isEmpty()) {
+        qDebug() << "error uncompressing";
+        return 1;
+      }
+    }
+    else {
+      compressedData = qCompress(originalData, -1); // Use level 9 for maximum compression
+    }
 
     // Set output filename
-    QString outName = name + ".z";
-
-    // Special case for .smime files
+    QString outName;
     int lastDot = name.lastIndexOf('.');
-    if (lastDot != -1) {
-        QString extension = name.mid(lastDot + 1);
-        QString filename = name.mid(0, lastDot);
-        if (extension == "smime") {
-          outName = filename + ".zsmime";
-        }
+    if (extract) {
+      if (lastDot == -1) {
+        qDebug() << "Don't know how to extract without extension yet.";
+        return 1;
+      }
+      QString extension = name.mid(lastDot + 1);
+      QString filename = name.mid(0, lastDot);
+
+      if (extension == "zsmime") {
+        outName = filename + ".smime";
+      }
+      else {
+        outName = filename;
+      }
+    }
+    else {
+      outName = name + ".z";
+      // Special case for .smime files
+      if (lastDot != -1) {
+          QString extension = name.mid(lastDot + 1);
+          QString filename = name.mid(0, lastDot);
+          if (extension == "smime") {
+            outName = filename + ".zsmime";
+          }
+      }
     }
     QFile outFile(outName);
 
     // Check if output exists
     if (QFile::exists(outName)) {
-        bool force = parser.isSet(forceOption);
         if (!force) {
           std::cout << "Overwrite " << outName.toStdString().c_str() << " (y/n)? " << std::flush;
           std::string confirm;
@@ -97,6 +129,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Load and decompress
+    if (extract) {
+      return 0;
+    }
     QFile inFile(outName);
     if (inFile.open(QIODevice::ReadOnly)) {
         QByteArray readData = inFile.readAll();
@@ -108,9 +143,11 @@ int main(int argc, char *argv[]) {
               qDebug() << "Decompressed data matches original data.";
             } else {
               qDebug() << "Decompressed data did not match:" << decompressedData;
+              return 1;
             }
         } else {
             qDebug() << "Decompression failed!";
+            return 1;
         }
     }
 
