@@ -26,6 +26,11 @@ int main(int argc, char *argv[]) {
         QCoreApplication::translate("main", "Overwrite existing files."));
     parser.addOption(forceOption);
 
+    // A boolean option with multiple names (-z, --zlib)
+     QCommandLineOption zlibOption(QStringList() << "z" << "zlib",
+        QCoreApplication::translate("main", "Enforce zlib compatibility."));
+    parser.addOption(zlibOption);
+
     // A boolean option with multiple names (-x, --extract)
      QCommandLineOption exOption(QStringList() << "x" << "extract",
         QCoreApplication::translate("main", "Extract compressed data."));
@@ -50,6 +55,14 @@ int main(int argc, char *argv[]) {
     }
     bool extract = parser.isSet(exOption);
     bool force = parser.isSet(forceOption);
+    bool zlib = parser.isSet(zlibOption);
+    if (zlib) {
+      qDebug() << "Warning: zlib mode";
+      // Compression to zlib .zz format is supported.
+      // - However official tools (pigz) are required to decompress these.
+      // The Qt algorithm does not support decompressing zlib .zz files
+      // by design due to requiring the length of the original data.
+    }
 
     // Original data
     QString name = pArgs.at(0);
@@ -67,9 +80,12 @@ int main(int argc, char *argv[]) {
     // Compress the data
     QByteArray compressedData;
     if (extract) {
+      if (zlib) {
+        // not supported
+      }
       compressedData = qUncompress(originalData);
       if (compressedData.isEmpty()) {
-        qDebug() << "error uncompressing";
+        qDebug() << "Operation aborted.";
         return 1;
       }
     }
@@ -96,14 +112,19 @@ int main(int argc, char *argv[]) {
       }
     }
     else {
-      outName = name + ".z";
-      // Special case for .smime files
-      if (lastDot != -1) {
-          QString extension = name.mid(lastDot + 1);
-          QString filename = name.mid(0, lastDot);
-          if (extension == "smime") {
-            outName = filename + ".zsmime";
-          }
+      if (zlib) {
+        outName = name + ".zz";
+      }
+      else {
+        outName = name + ".z";
+        // Special case for .smime files
+        if (lastDot != -1) {
+            QString extension = name.mid(lastDot + 1);
+            QString filename = name.mid(0, lastDot);
+            if (extension == "smime") {
+              outName = filename + ".zsmime";
+            }
+        }
       }
     }
     QFile outFile(outName);
@@ -121,6 +142,12 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    QByteArray header;
+    if (zlib) {
+      // strip 4 byte header
+      compressedData.remove(0, 4);
+    }
+
     // Save compressed data to a file
     if (outFile.open(QIODevice::WriteOnly)) {
         outFile.write(compressedData);
@@ -129,7 +156,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Load and decompress
-    if (extract) {
+    if (extract || zlib) {
       return 0;
     }
     QFile inFile(outName);
