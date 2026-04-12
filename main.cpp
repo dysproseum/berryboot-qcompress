@@ -12,13 +12,13 @@ int main(int argc, char *argv[]) {
     QCoreApplication app(argc, argv);
 
     // Set application metadata
-    QCoreApplication::setApplicationName("BerryBboot qCompress Utility");
+    QCoreApplication::setApplicationName("BerryBoot qCompress Utility");
     QCoreApplication::setApplicationVersion("1.0.0");
 
     QCommandLineParser parser;
     parser.addHelpOption();
     parser.addVersionOption();
-    parser.setApplicationDescription("Creates distro.zsmime if distro.smime exists");
+    parser.setApplicationDescription("Compress and expand files compatible with Qt");
     parser.addPositionalArgument("file", "The file to open.", "[file]");
 
     // A boolean option with multiple names (-f, --force)
