@@ -1,4 +1,8 @@
 .qmake.stash
 Makefile
-main.o
+.obj
 qcompress
+
+berryboot.key
+berryboot.csr
+berryboot.crt
