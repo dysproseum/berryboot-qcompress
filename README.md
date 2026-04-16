@@ -89,6 +89,10 @@ Decompressed data matches original data.
   * BerryBoot seems to prefer `http://` on port 80
   * If trying `https://`, BerryBoot prefers a FQDN over an IP address, and prefers port 443 over a non-standard port
 
+* `Downloaded data corrupt. Signature does not match`:
+  * Confirm the generated `berryboot.crt` matches the copy on the SD card
+  * Verify `distro.smime` was signed with the same certificate
+
 * **Whenever you update the distro file:** click Add OS and go to Network Settings - go to the Repository tab and then press ok - saving this form helps to **re-fetch a fresh distro file.**
 
 * `Error downloading file from Internet. file corrupt (sha1 does not match)`
